@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>AI训练师4级刷题</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0f172a;--card:#1e293b;--card-hover:#253349;
+  --primary:#6366f1;--primary-glow:rgba(99,102,241,.25);
+  --success:#22c55e;--success-bg:rgba(34,197,94,.12);
+  --error:#ef4444;--error-bg:rgba(239,68,68,.12);
+  --correct-highlight:#16a34a;
+  --text:#f1f5f9;--text-dim:#94a3b8;--text-muted:#64748b;
+  --border:#334155;--radius:14px;
+}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  background:var(--bg);color:var(--text);
+  min-height:100dvh;padding:0;
+  -webkit-tap-highlight-color:transparent;
+}
+/* ===== Loading / Error ===== */
+.screen{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100dvh;padding:24px;text-align:center}
+.screen.active{display:flex}
+.spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite;margin-bottom:16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.error-msg{color:var(--error);font-size:15px;line-height:1.6}
+/* ===== Header ===== */
+.header{
+  position:sticky;top:0;z-index:10;
+  background:rgba(15,23,42,.85);backdrop-filter:blur(12px);
+  padding:12px 16px 10px;border-bottom:1px solid var(--border);
+}
+.header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.badge{
+  font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;
+  background:var(--primary);color:#fff;letter-spacing:.5px;
+}
+.score-pill{
+  font-size:13px;color:var(--text-dim);
+  background:var(--card);padding:4px 12px;border-radius:20px;
+}
+.progress-bar{height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--primary),#a78bfa);border-radius:3px;transition:width .4s ease}
+/* ===== Main ===== */
+.main{padding:16px;padding-bottom:120px}
+.stem{
+  font-size:17px;line-height:1.7;font-weight:500;
+  margin-bottom:20px;padding:0 2px;
+}
+/* ===== Options ===== */
+.option{
+  display:block;width:100%;
+  padding:14px 16px;margin-bottom:10px;
+  background:var(--card);border:2px solid transparent;
+  border-radius:var(--radius);color:var(--text);
+  font-size:15px;line-height:1.5;text-align:left;
+  cursor:pointer;transition:all .2s;position:relative;
+  -webkit-user-select:none;user-select:none;
+}
+.option:active{transform:scale(.98)}
+.option .letter{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:26px;height:26px;border-radius:8px;
+  background:var(--border);font-weight:700;font-size:13px;
+  margin-right:10px;flex-shrink:0;transition:all .2s;
+}
+.option.selected-correct{
+  background:var(--success-bg);border-color:var(--success);
+}
+.option.selected-correct .letter{background:var(--success);color:#fff}
+.option.selected-wrong{
+  background:var(--error-bg);border-color:var(--error);
+}
+.option.selected-wrong .letter{background:var(--error);color:#fff}
+.option.show-correct{
+  background:var(--success-bg);border-color:var(--correct-highlight);
+}
+.option.show-correct .letter{background:var(--correct-highlight);color:#fff}
+.option.disabled{pointer-events:none;opacity:.7}
+.option.disabled.show-correct{opacity:1}
+/* ===== AI Panel ===== */
+.ai-panel{
+  margin-top:16px;border-radius:var(--radius);
+  background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(168,85,247,.08));
+  border:1px solid rgba(99,102,241,.25);
+  overflow:hidden;
+  animation:slideDown .35s ease;
+}
+@keyframes slideDown{from{opacity:0;max-height:0}to{opacity:1;max-height:2000px}}
+.ai-header{
+  display:flex;align-items:center;gap:8px;
+  padding:12px 16px;font-size:14px;font-weight:600;
+  color:#a78bfa;border-bottom:1px solid rgba(99,102,241,.15);
+}
+.ai-header .dot{width:8px;height:8px;border-radius:50%;background:#a78bfa;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.ai-body{padding:16px;font-size:14px;line-height:1.8;color:var(--text)}
+.ai-body h3{font-size:15px;margin:12px 0 6px;color:#c4b5fd}
+.ai-body h3:first-child{margin-top:0}
+.ai-body p{margin-bottom:8px}
+.ai-body ul{padding-left:18px;margin-bottom:8px}
+.ai-body strong{color:#e2e8f0}
+.ai-body code{background:rgba(99,102,241,.15);padding:1px 5px;border-radius:4px;font-size:13px}
+.ai-loading{padding:24px 16px;text-align:center;color:var(--text-dim);font-size:14px}
+.ai-loading .dots::after{content:'';animation:dots 1.5s steps(4) infinite}
+@keyframes dots{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}}
+/* ===== Bottom Bar ===== */
+.bottom-bar{
+  position:fixed;bottom:0;left:0;right:0;
+  padding:12px 16px;padding-bottom:max(12px,env(safe-area-inset-bottom));
+  background:rgba(15,23,42,.92);backdrop-filter:blur(12px);
+  border-top:1px solid var(--border);z-index:10;
+}
+.btn-next{
+  display:none;width:100%;padding:14px;
+  background:var(--primary);color:#fff;border:none;
+  border-radius:var(--radius);font-size:16px;font-weight:600;
+  cursor:pointer;transition:all .2s;
+}
+.btn-next:active{transform:scale(.97);opacity:.85}
+.btn-next.show{display:block}
+/* ===== Result Screen ===== */
+.result-card{
+  background:var(--card);border-radius:20px;
+  padding:32px 24px;width:100%;max-width:340px;
+  text-align:center;
+}
+.result-ring{
+  width:120px;height:120px;margin:0 auto 20px;position:relative;
+}
+.result-ring svg{transform:rotate(-90deg)}
+.result-ring circle{fill:none;stroke-width:8;stroke-linecap:round}
+.result-ring .bg{stroke:var(--border)}
+.result-ring .fg{stroke:var(--primary);transition:stroke-dashoffset 1s ease}
+.result-pct{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:28px;font-weight:700;
+}
+.result-stats{display:flex;justify-content:center;gap:24px;margin:16px 0 24px}
+.result-stats div{text-align:center}
+.result-stats .num{font-size:22px;font-weight:700}
+.result-stats .label{font-size:12px;color:var(--text-dim);margin-top:2px}
+.btn-restart{
+  width:100%;padding:14px;background:var(--primary);color:#fff;
+  border:none;border-radius:var(--radius);font-size:16px;font-weight:600;cursor:pointer;
+}
+</style>
+</head>
+<body>
+
+<!-- Loading Screen -->
+<div id="loading" class="screen active">
+  <div class="spinner"></div>
+  <div style="color:var(--text-dim);font-size:14px">正在加载题库...</div>
+</div>
+
+<!-- Error Screen -->
+<div id="errorScreen" class="screen">
+  <div class="error-msg" id="errorMsg"></div>
+</div>
+
+<!-- Quiz Screen -->
+<div id="quizScreen" class="screen" style="justify-content:flex-start">
+  <div class="header">
+    <div class="header-top">
+      <span class="badge" id="typeBadge">单选题</span>
+      <span class="score-pill" id="scorePill">0 / 0</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+  </div>
+  <div class="main">
+    <div class="stem" id="stemText"></div>
+    <div id="optionsContainer"></div>
+    <div id="aiContainer"></div>
+  </div>
+  <div class="bottom-bar">
+    <button class="btn-next" id="btnNext" onclick="nextQuestion()">下一题</button>
+  </div>
+</div>
+
+<!-- Result Screen -->
+<div id="resultScreen" class="screen">
+  <div class="result-card">
+    <div class="result-ring">
+      <svg viewBox="0 0 120 120" width="120" height="120">
+        <circle class="bg" cx="60" cy="60" r="52"/>
+        <circle class="fg" id="resultRing" cx="60" cy="60" r="52"
+          stroke-dasharray="326.73" stroke-dashoffset="326.73"/>
+      </svg>
+      <div class="result-pct" id="resultPct">0%</div>
+    </div>
+    <div style="font-size:18px;font-weight:600;margin-bottom:4px">答题结束</div>
+    <div class="result-stats">
+      <div><div class="num" id="resultTotal" style="color:var(--primary)">0</div><div class="label">总题数</div></div>
+      <div><div class="num" id="resultCorrect" style="color:var(--success)">0</div><div class="label">正确</div></div>
+      <div><div class="num" id="resultWrong" style="color:var(--error)">0</div><div class="label">错误</div></div>
+    </div>
+    <button class="btn-restart" onclick="restart()">重新开始</button>
+  </div>
+</div>
+
+<script>
+// ==================== 配置区 ====================
+const API_KEY   = "tp-conw275x6s5sk1v7wa80nl0nb86qhmjeid436w19h33p5rnz";
+const BASE_URL  = "https://token-plan-cn.xiaomimimo.com/v1/chat/completions";
+const MODEL_NAME = "MiMo-V2-Flash";
+// ================================================
+
+let questions = [];
+let idx = 0, total = 0, correct = 0;
+let answered = false;
+const wrongList = [];
+
+// ——— Shuffle (Fisher-Yates) ———
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.random()*i+1|0;[a[i],a[j]]=[a[j],a[i]]}return a}
+
+// ——— Load questions.json ———
+async function init(){
+  try{
+    const res = await fetch('questions.json');
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    questions = await res.json();
+    if(!questions.length) throw new Error('题库为空');
+    shuffle(questions);
+    total = questions.length;
+    show('quizScreen');
+    render();
+  }catch(e){
+    document.getElementById('errorMsg').textContent =
+      `加载题库失败: ${e.message}\n请确认 questions.json 存在于同级目录。`;
+    show('errorScreen');
+  }
+}
+
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ——— Render question ———
+function render(){
+  answered = false;
+  const q = questions[idx];
+  document.getElementById('typeBadge').textContent = q.type==='single'?'单选题':'判断题';
+  document.getElementById('scorePill').textContent = `${correct} / ${total}`;
+  document.getElementById('progressFill').style.width = `${(idx/total)*100}%`;
+  document.getElementById('stemText').textContent = q.stem;
+  document.getElementById('aiContainer').innerHTML = '';
+  document.getElementById('btnNext').classList.remove('show');
+
+  const box = document.getElementById('optionsContainer');
+  box.innerHTML = '';
+
+  let opts;
+  if(q.type==='single'){
+    opts = parseOptions(q.options);
+  }else{
+    opts = [{letter:'A',text:'正确'},{letter:'B',text:'错误'}];
+  }
+  const correctLetter = normalizeAnswer(q);
+
+  opts.forEach(o=>{
+    const div = document.createElement('div');
+    div.className = 'option';
+    div.dataset.letter = o.letter;
+    div.innerHTML = `<span class="letter">${o.letter}</span>${o.text}`;
+    div.onclick = ()=> handlePick(div, o.letter, correctLetter, q);
+    box.appendChild(div);
+  });
+
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ——— Parse "A.xxx B.xxx C.xxx D.xxx" ———
+function parseOptions(raw){
+  const result = [];
+  const letters = ['A','B','C','D'];
+  for(let i=0;i<letters.length;i++){
+    const tag = letters[i]+'.';
+    const start = raw.indexOf(tag);
+    if(start===-1) continue;
+    const end = i<letters.length-1
+      ? (raw.indexOf(letters[i+1]+'.', start+2) ?? raw.length)
+      : raw.length;
+    result.push({letter:letters[i], text: raw.slice(start+2, end===-1?raw.length:end).trim()});
+  }
+  return result;
+}
+
+function normalizeAnswer(q){
+  if(q.type==='judge') return q.answer==='正确'?'A':'B';
+  return q.answer.trim().toUpperCase();
+}
+
+// ——— Handle selection ———
+function handlePick(el, picked, correctLetter, q){
+  if(answered) return;
+  answered = true;
+  total++; // track attempted
+
+  const allOpts = document.querySelectorAll('.option');
+  allOpts.forEach(o=>o.classList.add('disabled'));
+
+  if(picked === correctLetter){
+    el.classList.add('selected-correct');
+    correct++;
+  }else{
+    el.classList.add('selected-wrong');
+    // highlight correct
+    allOpts.forEach(o=>{
+      if(o.dataset.letter===correctLetter) o.classList.add('show-correct');
+    });
+    // record wrong
+    wrongList.push({
+      question_id: q.question_id, type: q.type,
+      stem: q.stem, options: q.options||'',
+      user_answer: picked, correct_answer: correctLetter
+    });
+    // call AI
+    fetchAI(q, picked, correctLetter);
+  }
+
+  document.getElementById('scorePill').textContent = `${correct} / ${total}`;
+  document.getElementById('btnNext').classList.add('show');
+
+  // last question → change button
+  if(idx >= questions.length - 1){
+    document.getElementById('btnNext').textContent = '查看结果';
+  }
+}
+
+// ——— AI Analysis ———
+async function fetchAI(q, picked, correctLetter){
+  const box = document.getElementById('aiContainer');
+  box.innerHTML = `
+    <div class="ai-panel">
+      <div class="ai-header"><span class="dot"></span>AI 导师深度解析</div>
+      <div class="ai-loading">正在分析<span class="dots"></span></div>
+    </div>`;
+
+  const systemPrompt = `你是人工智能训练师（4级）考试的金牌讲师。请针对学生的错题，用 Markdown 格式直接输出：
+1. 🎯【思维陷阱】：一针见血指出他为什么会选错。
+2. 📚【硬核考点】：结合人工智能训练师标准或相关法律法规讲透知识点。
+3. 🔑【防呆口诀】：用一句话（15字以内）总结核心记忆点。
+不要有任何废话。`;
+
+  const userPrompt = `题目：${q.stem}\n选项：${q.options||'（判断题）'}\n学生错选了：${picked}\n正确答案是：${correctLetter}`;
+
+  try{
+    const res = await fetch(BASE_URL, {
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization':`Bearer ${API_KEY}`
+      },
+      body: JSON.stringify({
+        model: MODEL_NAME,
+        messages:[
+          {role:'system', content: systemPrompt},
+          {role:'user', content: userPrompt}
+        ],
+        temperature: 0.3,
+        max_tokens: 1024
+      })
+    });
+    if(!res.ok) throw new Error(`API ${res.status}`);
+    const data = await res.json();
+    const md = data.choices[0].message.content;
+    box.innerHTML = `
+      <div class="ai-panel">
+        <div class="ai-header"><span class="dot"></span>AI 导师深度解析</div>
+        <div class="ai-body">${renderMarkdown(md)}</div>
+      </div>`;
+  }catch(e){
+    box.innerHTML = `
+      <div class="ai-panel">
+        <div class="ai-header">⚠️ AI 解析失败</div>
+        <div class="ai-body" style="color:var(--text-dim)">${e.message}</div>
+      </div>`;
+  }
+}
+
+// ——— Minimal Markdown → HTML ———
+function renderMarkdown(md){
+  return md
+    .replace(/^### (.+)$/gm,'<h3>$1</h3>')
+    .replace(/^## (.+)$/gm,'<h3>$1</h3>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/`(.+?)`/g,'<code>$1</code>')
+    .replace(/^- (.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g,'<ul>$&</ul>')
+    .replace(/\n{2,}/g,'</p><p>')
+    .replace(/\n/g,'<br>')
+    .replace(/^(.+)$/gm,(m)=>{
+      if(m.startsWith('<h')||m.startsWith('<ul')||m.startsWith('<p')||m.startsWith('<li')) return m;
+      return m;
+    });
+}
+
+// ——— Next / Result ———
+function nextQuestion(){
+  idx++;
+  if(idx >= questions.length){
+    showResult();
+  }else{
+    render();
+  }
+}
+
+function showResult(){
+  show('resultScreen');
+  const pct = total? Math.round(correct/total*100):0;
+  document.getElementById('resultPct').textContent = pct+'%';
+  document.getElementById('resultTotal').textContent = total;
+  document.getElementById('resultCorrect').textContent = correct;
+  document.getElementById('resultWrong').textContent = total-correct;
+  // animate ring
+  const circ = 2*Math.PI*52;
+  document.getElementById('resultRing').style.strokeDashoffset = circ*(1-pct/100);
+  // color ring by score
+  document.getElementById('resultRing').style.stroke =
+    pct>=80?'var(--success)':pct>=60?'var(--primary)':'var(--error)';
+}
+
+function restart(){
+  idx=0;total=0;correct=0;answered=false;
+  wrongList.length=0;
+  shuffle(questions);
+  document.getElementById('btnNext').textContent='下一题';
+  show('quizScreen');
+  render();
+}
+
+// ——— Go ———
+init();
+</script>
+</body>
+</html>
