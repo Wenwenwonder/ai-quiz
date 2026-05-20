@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>AI训练师4级刷题</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0a0f1e;--surface:#111827;--card:#1e293b;--card-hover:#263549;
+  --primary:#6366f1;--primary-light:#818cf8;--primary-bg:rgba(99,102,241,.1);
+  --success:#22c55e;--success-bg:rgba(34,197,94,.12);
+  --danger:#ef4444;--danger-bg:rgba(239,68,68,.12);
+  --warn:#f59e0b;--warn-bg:rgba(245,158,11,.12);
+  --text:#f1f5f9;--text-2:#cbd5e1;--text-3:#94a3b8;--text-4:#64748b;
+  --border:#1e293b;--border-2:#334155;
+  --r:14px;--r-sm:10px;--r-xs:8px;
+  --shadow:0 8px 32px rgba(0,0,0,.45);
+  --safe-bottom:max(12px,env(safe-area-inset-bottom));
+}
+html,body{height:100%;overflow-x:hidden}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background:var(--bg);color:var(--text);line-height:1.6;
+}
+input,textarea,button,select{font-family:inherit}
+/* ===== Screens ===== */
+.screen{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100dvh;padding:24px;text-align:center}
+.screen.active{display:flex}
+.spinner{width:44px;height:44px;border:3px solid var(--border-2);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite;margin-bottom:16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.error-box{color:var(--danger);font-size:15px;line-height:1.8;max-width:400px;white-space:pre-wrap}
+
+/* ===== Sticky Header ===== */
+.hdr{
+  position:sticky;top:0;z-index:50;
+  background:rgba(10,15,30,.88);backdrop-filter:saturate(180%) blur(14px);
+  -webkit-backdrop-filter:saturate(180%) blur(14px);
+  border-bottom:1px solid var(--border);
+}
+.hdr-row{display:flex;align-items:center;justify-content:space-between;padding:10px 16px 0;gap:8px;flex-wrap:wrap}
+.hdr-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.type-tag{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:var(--primary);color:#fff;letter-spacing:.5px}
+.stat{font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:3px}
+.stat-ok{background:var(--success-bg);color:var(--success);border:1px solid rgba(34,197,94,.25)}
+.stat-err{background:var(--danger-bg);color:var(--danger);border:1px solid rgba(239,68,68,.25)}
+.qnum{font-size:13px;color:var(--text-3);background:var(--card);padding:3px 10px;border-radius:20px}
+.hdr-right{display:flex;align-items:center;gap:6px}
+.icon-btn{
+  width:34px;height:34px;border-radius:50%;border:none;
+  background:var(--card);color:var(--text-3);font-size:16px;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  transition:all .15s;
+}
+.icon-btn:active{transform:scale(.9);background:var(--card-hover)}
+.progress{height:4px;background:var(--border);margin-top:8px;border-radius:2px;overflow:hidden}
+.progress-inner{height:100%;background:linear-gradient(90deg,var(--primary),#a78bfa);border-radius:2px;transition:width .35s ease}
+
+/* ===== Mode bar ===== */
+.mode-bar{
+  padding:6px 16px;display:none;align-items:center;justify-content:space-between;
+  background:var(--warn-bg);border-bottom:1px solid rgba(245,158,11,.15);
+  font-size:13px;color:var(--warn);
+}
+.mode-bar.on{display:flex}
+.mode-bar button{background:none;border:1px solid var(--warn);color:var(--warn);padding:2px 10px;border-radius:6px;font-size:12px;cursor:pointer}
+
+/* ===== Main Content ===== */
+.main{padding:16px 16px 140px}
+.stem{font-size:17px;line-height:1.75;font-weight:500;margin-bottom:18px}
+
+/* ===== Option Cards ===== */
+.opt{
+  display:flex;align-items:flex-start;width:100%;
+  padding:14px 16px;margin-bottom:10px;
+  background:var(--card);border:2px solid transparent;
+  border-radius:var(--r);color:var(--text);
+  font-size:15px;line-height:1.55;text-align:left;
+  cursor:pointer;transition:all .18s;gap:0;
+  -webkit-user-select:none;user-select:none;
+}
+.opt:active{transform:scale(.98)}
+.opt-letter{
+  width:28px;height:28px;border-radius:var(--r-xs);
+  background:var(--border-2);font-weight:700;font-size:13px;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;margin-right:12px;transition:all .18s;
+}
+.opt-body{flex:1}
+.opt.hit-ok{background:var(--success-bg);border-color:var(--success)}
+.opt.hit-ok .opt-letter{background:var(--success);color:#fff}
+.opt.hit-err{background:var(--danger-bg);border-color:var(--danger)}
+.opt.hit-err .opt-letter{background:var(--danger);color:#fff}
+.opt.show-ok{background:var(--success-bg);border-color:#16a34a}
+.opt.show-ok .opt-letter{background:#16a34a;color:#fff}
+.opt.locked{pointer-events:none;opacity:.65}
+.opt.locked.show-ok{opacity:1}
+
+/* ===== Collect ===== */
+.collect-wrap{text-align:center;margin:14px 0 4px}
+.btn-collect{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:9px 20px;border-radius:var(--r);border:1px dashed var(--border-2);
+  background:transparent;color:var(--text-3);font-size:14px;cursor:pointer;transition:all .18s;
+}
+.btn-collect:active{transform:scale(.97)}
+.btn-collect.on{border-color:var(--primary);color:var(--primary-light);background:var(--primary-bg)}
+
+/* ===== AI Panel ===== */
+.ai{
+  margin-top:16px;border-radius:var(--r);overflow:hidden;
+  background:linear-gradient(135deg,rgba(99,102,241,.06),rgba(168,85,247,.06));
+  border:1px solid rgba(99,102,241,.2);
+  animation:fadeUp .35s ease;
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.ai-hd{display:flex;align-items:center;gap:8px;padding:11px 16px;font-size:14px;font-weight:600;color:#a78bfa;border-bottom:1px solid rgba(99,102,241,.12)}
+.ai-hd .dot{width:7px;height:7px;border-radius:50%;background:#a78bfa;animation:pulse 1.4s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+.ai-body{padding:14px 16px;font-size:14px;line-height:1.85}
+.ai-body h3{font-size:15px;margin:10px 0 5px;color:#c4b5fd}
+.ai-body h3:first-child{margin-top:0}
+.ai-body p{margin-bottom:6px}
+.ai-body ul{padding-left:18px;margin-bottom:6px}
+.ai-body strong{color:#e2e8f0}
+.ai-body code{background:rgba(99,102,241,.15);padding:1px 5px;border-radius:4px;font-size:13px}
+.ai-ld{text-align:center;padding:20px 16px;color:var(--text-3);font-size:14px}
+.ai-ld .dots::after{content:'';animation:dots 1.4s steps(4) infinite}
+@keyframes dots{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}}
+.ai-err{color:var(--text-3);font-size:13px;padding:4px 0}
+
+/* ===== Bottom Bar ===== */
+.btm{
+  position:fixed;bottom:0;left:0;right:0;z-index:50;
+  padding:10px 16px;padding-bottom:var(--safe-bottom);
+  background:rgba(10,15,30,.92);backdrop-filter:blur(12px);
+  border-top:1px solid var(--border);
+  display:flex;gap:10px;
+}
+.btn-primary{
+  flex:1;padding:13px;border:none;border-radius:var(--r);
+  background:var(--primary);color:#fff;font-size:16px;font-weight:600;
+  cursor:pointer;transition:all .15s;display:none;
+}
+.btn-primary:active{transform:scale(.97);opacity:.85}
+.btn-primary.on{display:block}
+.btn-reset{
+  padding:13px 18px;border:1px solid var(--border-2);border-radius:var(--r);
+  background:transparent;color:var(--text-3);font-size:14px;font-weight:500;
+  cursor:pointer;transition:all .15s;white-space:nowrap;
+}
+.btn-reset:active{background:var(--card)}
+
+/* ===== FABs ===== */
+.fabs{position:fixed;bottom:76px;right:14px;z-index:55;display:flex;flex-direction:column;gap:10px}
+.fab{
+  width:48px;height:48px;border-radius:50%;border:none;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;cursor:pointer;box-shadow:var(--shadow);
+  transition:transform .15s;position:relative;
+}
+.fab:active{transform:scale(.88)}
+.fab-sheet{background:var(--primary);color:#fff}
+.fab-wb{background:#f59e0b;color:#fff}
+.fab-dot{
+  position:absolute;top:-2px;right:-2px;min-width:17px;height:17px;
+  border-radius:9px;background:var(--danger);color:#fff;font-size:9px;
+  font-weight:700;display:none;align-items:center;justify-content:center;padding:0 4px;
+}
+
+/* ===== Generic Overlay / Panel ===== */
+.overlay{
+  position:fixed;inset:0;z-index:200;
+  background:rgba(0,0,0,.55);
+  display:none;align-items:flex-end;justify-content:center;
+}
+.overlay.open{display:flex}
+.panel{
+  width:100%;max-width:500px;
+  background:var(--surface);border-radius:20px 20px 0 0;
+  overflow:hidden;display:flex;flex-direction:column;
+  animation:slideUp .28s ease;
+}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.panel-bar{width:36px;height:4px;border-radius:2px;background:var(--text-4);margin:10px auto 0}
+.panel-hd{
+  padding:14px 18px 10px;font-size:16px;font-weight:700;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.panel-close{background:none;border:none;color:var(--text-3);font-size:22px;cursor:pointer;padding:2px 6px}
+.panel-bd{padding:6px 16px 24px;overflow-y:auto;flex:1}
+
+/* ===== Sheet (Answer Card) ===== */
+.sheet-legend{display:flex;gap:14px;padding:0 18px 10px;font-size:12px;color:var(--text-3)}
+.sheet-legend span{display:flex;align-items:center;gap:4px}
+.leg-dot{width:10px;height:10px;border-radius:50%}
+.leg-gray{background:#374151}.leg-green{background:var(--success)}.leg-red{background:var(--danger)}
+.sheet-grid{
+  display:grid;grid-template-columns:repeat(7,1fr);gap:8px;
+  max-height:60dvh;overflow-y:auto;padding:4px 0;
+}
+.sheet-dot{
+  aspect-ratio:1;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:600;cursor:pointer;
+  transition:all .12s;
+}
+.sheet-dot:active{transform:scale(.85)}
+.sd-pending{background:var(--card);color:var(--text-4);border:1.5px solid var(--border-2)}
+.sd-ok{background:var(--success-bg);color:var(--success);border:1.5px solid rgba(34,197,94,.3)}
+.sd-err{background:var(--danger-bg);color:var(--danger);border:1.5px solid rgba(239,68,68,.3)}
+.sd-here{box-shadow:0 0 0 2.5px var(--primary-light)}
+
+/* ===== Wrong Book ===== */
+.wb-item{
+  background:var(--card);border-radius:var(--r-sm);padding:14px;margin-bottom:10px;
+  border:1px solid var(--border);
+}
+.wb-stem{font-size:14px;line-height:1.6;margin-bottom:8px;font-weight:500}
+.wb-meta{font-size:12px;color:var(--text-3);display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.wb-tag{padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600}
+.wb-tag-ok{background:var(--success-bg);color:var(--success)}
+.wb-tag-type{background:var(--card-hover);color:var(--text-3)}
+.wb-acts{display:flex;gap:8px;margin-top:10px}
+.wb-acts button{
+  flex:1;padding:7px;border-radius:var(--r-xs);border:1px solid var(--border-2);
+  background:transparent;color:var(--text-3);font-size:12px;cursor:pointer;
+}
+.wb-acts button:active{opacity:.7}
+.wb-acts .b-go{border-color:var(--primary);color:var(--primary-light)}
+.wb-empty{text-align:center;padding:40px 20px;color:var(--text-3);font-size:14px}
+
+/* ===== Settings Modal ===== */
+.set-panel{max-height:80dvh}
+.set-group{margin-bottom:16px}
+.set-label{font-size:13px;color:var(--text-3);margin-bottom:6px;font-weight:500}
+.set-input{
+  width:100%;padding:11px 14px;border-radius:var(--r-sm);
+  background:var(--card);border:1px solid var(--border-2);
+  color:var(--text);font-size:14px;outline:none;transition:border .2s;
+}
+.set-input:focus{border-color:var(--primary)}
+.set-input::placeholder{color:var(--text-4)}
+.set-hint{font-size:11px;color:var(--text-4);margin-top:4px}
+.set-actions{display:flex;gap:10px;margin-top:20px}
+.set-actions button{
+  flex:1;padding:12px;border-radius:var(--r);border:none;
+  font-size:15px;font-weight:600;cursor:pointer;transition:all .15s;
+}
+.set-actions button:active{transform:scale(.97)}
+.set-save{background:var(--primary);color:#fff}
+.set-cancel{background:var(--card);color:var(--text-3)}
+
+/* ===== Result ===== */
+.res-card{background:var(--surface);border-radius:20px;padding:32px 24px;width:100%;max-width:340px;text-align:center}
+.res-ring{width:120px;height:120px;margin:0 auto 18px;position:relative}
+.res-ring svg{transform:rotate(-90deg)}
+.res-ring circle{fill:none;stroke-width:8;stroke-linecap:round}
+.res-ring .bg{stroke:var(--border-2)}
+.res-ring .fg{stroke:var(--primary);transition:stroke-dashoffset 1s ease}
+.res-pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700}
+.res-stats{display:flex;justify-content:center;gap:24px;margin:14px 0 22px}
+.res-stats div{text-align:center}
+.res-stats .n{font-size:22px;font-weight:700}
+.res-stats .l{font-size:12px;color:var(--text-3);margin-top:2px}
+.btn-res{
+  width:100%;padding:14px;background:var(--primary);color:#fff;
+  border:none;border-radius:var(--r);font-size:16px;font-weight:600;cursor:pointer;
+}
+.btn-res:active{transform:scale(.97)}
+
+/* ===== Toast ===== */
+.toast{
+  position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:999;
+  background:var(--card);color:var(--text);padding:10px 20px;border-radius:var(--r);
+  font-size:14px;box-shadow:var(--shadow);opacity:0;
+  transition:opacity .25s;pointer-events:none;
+}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="scrLoad" class="screen active"><div class="spinner"></div><div style="color:var(--text-3);font-size:14px">正在加载题库...</div></div>
+<!-- Error -->
+<div id="scrErr" class="screen"><div class="error-box" id="errMsg"></div></div>
+
+<!-- Quiz -->
+<div id="scrQuiz" class="screen" style="justify-content:flex-start">
+  <!-- Header -->
+  <div class="hdr">
+    <div class="mode-bar" id="modeBar"><span>📖 错题练习模式</span><button onclick="exitWrong()">退出</button></div>
+    <div class="hdr-row">
+      <div class="hdr-left">
+        <span class="type-tag" id="tagType">单选题</span>
+        <span class="stat stat-ok" id="sOk">✓ 0</span>
+        <span class="stat stat-err" id="sErr">✗ 0</span>
+      </div>
+      <div class="hdr-right">
+        <span class="qnum" id="qNum">1/600</span>
+        <button class="icon-btn" onclick="openSet()" title="设置">⚙️</button>
+      </div>
+    </div>
+    <div class="progress"><div class="progress-inner" id="pBar" style="width:0%"></div></div>
+  </div>
+  <!-- Body -->
+  <div class="main">
+    <div class="stem" id="stemBox"></div>
+    <div id="optsBox"></div>
+    <div id="colBox"></div>
+    <div id="aiBox"></div>
+  </div>
+  <!-- Bottom -->
+  <div class="btm">
+    <button class="btn-reset" onclick="confirmReset()">重置</button>
+    <button class="btn-primary" id="btnNext" onclick="goNext()">下一题</button>
+  </div>
+  <!-- FABs -->
+  <div class="fabs">
+    <button class="fab fab-sheet" onclick="openSheet()" title="答题卡">📊</button>
+    <button class="fab fab-wb" onclick="openWB()" title="错题本" style="position:relative">📥<span class="fab-dot" id="wbDot">0</span></button>
+  </div>
+</div>
+
+<!-- Answer Sheet Overlay -->
+<div class="overlay" id="ovSheet" onclick="closeOut(event,'ovSheet')">
+  <div class="panel">
+    <div class="panel-bar"></div>
+    <div class="panel-hd"><span>📊 答题卡</span><button class="panel-close" onclick="closeSheet()">✕</button></div>
+    <div class="sheet-legend">
+      <span><span class="leg-dot leg-gray"></span>未做</span>
+      <span><span class="leg-dot leg-green"></span>正确</span>
+      <span><span class="leg-dot leg-red"></span>错误</span>
+      <span style="margin-left:auto;font-size:11px" id="sheetSummary"></span>
+    </div>
+    <div class="panel-bd"><div class="sheet-grid" id="sheetGrid"></div></div>
+  </div>
+</div>
+
+<!-- Wrong Book Overlay -->
+<div class="overlay" id="ovWB" onclick="closeOut(event,'ovWB')">
+  <div class="panel">
+    <div class="panel-bar"></div>
+    <div class="panel-hd"><span>📥 我的错题本</span><button class="panel-close" onclick="closeWB()">✕</button></div>
+    <div class="panel-bd" id="wbBody"></div>
+  </div>
+</div>
+
+<!-- Settings Overlay -->
+<div class="overlay" id="ovSet" onclick="closeOut(event,'ovSet')">
+  <div class="panel set-panel">
+    <div class="panel-bar"></div>
+    <div class="panel-hd"><span>⚙️ AI 配置</span><button class="panel-close" onclick="closeSet()">✕</button></div>
+    <div class="panel-bd">
+      <div class="set-group">
+        <div class="set-label">API 地址（BASE_URL）</div>
+        <input class="set-input" id="setUrl" placeholder="https://api.example.com/v1/chat/completions" spellcheck="false">
+        <div class="set-hint">兼容 OpenAI 格式的任意大模型接口地址</div>
+      </div>
+      <div class="set-group">
+        <div class="set-label">API 密钥（API_KEY）</div>
+        <input class="set-input" id="setKey" placeholder="sk-xxxxxxxx" type="password" spellcheck="false">
+        <div class="set-hint">密钥仅保存在您的设备本地，不会上传</div>
+      </div>
+      <div class="set-group">
+        <div class="set-label">模型名称（MODEL）</div>
+        <input class="set-input" id="setModel" placeholder="MiMo-V2-Flash" spellcheck="false">
+      </div>
+      <div class="set-actions">
+        <button class="set-cancel" onclick="closeSet()">取消</button>
+        <button class="set-save" onclick="saveSet()">保存配置</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Result -->
+<div id="scrRes" class="screen">
+  <div class="res-card">
+    <div class="res-ring">
+      <svg viewBox="0 0 120 120" width="120" height="120">
+        <circle class="bg" cx="60" cy="60" r="52"/>
+        <circle class="fg" id="resRing" cx="60" cy="60" r="52" stroke-dasharray="326.73" stroke-dashoffset="326.73"/>
+      </svg>
+      <div class="res-pct" id="resPct">0%</div>
+    </div>
+    <div style="font-size:18px;font-weight:600;margin-bottom:4px">答题结束</div>
+    <div class="res-stats">
+      <div><div class="n" id="resAll" style="color:var(--primary)">0</div><div class="l">总题数</div></div>
+      <div><div class="n" id="resOk" style="color:var(--success)">0</div><div class="l">正确</div></div>
+      <div><div class="n" id="resErr" style="color:var(--danger)">0</div><div class="l">错误</div></div>
+    </div>
+    <button class="btn-res" onclick="restart()">重新开始</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ========================================
+   STORAGE KEYS
+   ======================================== */
+const SK = {
+  state: 'aq_state',       // { [qid]: 'correct'|'wrong' }
+  idx:   'aq_idx',         // last viewed index
+  order: 'aq_order',       // question order array
+  wb:    'aq_wrongbook',   // wrong book [{qid,type,stem,options,answer}]
+  set:   'aq_settings'     // {url, key, model}
+};
+const DEF_SET = {
+  url:   'https://token-plan-cn.xiaomimimo.com/v1/chat/completions',
+  key:   'tp-conw275x6s5sk1v7wa80nl0nb86qhmjeid436w19h33p5rnz',
+  model: 'MiMo-V2-Flash'
+};
+
+/* ========================================
+   STORAGE HELPERS
+   ======================================== */
+function lsGet(k,d){try{const v=localStorage.getItem(SK[k]);return v?JSON.parse(v):d}catch{return d}}
+function lsSet(k,v){try{localStorage.setItem(SK[k],JSON.stringify(v))}catch{}}
+function lsDel(k){try{localStorage.removeItem(SK[k])}catch{}}
+
+function getState(){return lsGet('state',{})}
+function setState(s){lsSet('state',s)}
+function setQState(qid,status){const s=getState();s[qid]=status;setState(s)}
+function getQState(qid){return getState()[qid]}
+function getSettings(){return lsGet('set',DEF_SET)}
+function saveSettings(s){lsSet('set',s)}
+function getWB(){return lsGet('wb',[])}
+function setWB(w){lsSet('wb',w)}
+function getOrder(){return lsGet('order',null)}
+function setOrder(o){lsSet('order',o)}
+function getLastIdx(){return lsGet('idx',0)}
+function setLastIdx(i){lsSet('idx',i)}
+
+/* ========================================
+   GLOBALS
+   ======================================== */
+let allQ = [];          // full question bank
+let Q = [];             // active list
+let qi = 0;             // current index into Q
+let answered = false;
+let wrongMode = false;
+
+/* ========================================
+   INIT
+   ======================================== */
+async function init(){
+  try{
+    const r = await fetch('questions.json');
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    allQ = await r.json();
+    if(!allQ.length) throw new Error('题库为空');
+    resumeOrStart();
+  }catch(e){
+    el('errMsg').textContent='加载题库失败: '+e.message+'\n请确认 questions.json 在同目录。';
+    go('scrErr');
+  }
+}
+
+function resumeOrStart(){
+  wrongMode = false;
+  el('modeBar').classList.remove('on');
+
+  const savedOrder = getOrder();
+  const savedIdx   = getLastIdx();
+
+  if(savedOrder && savedOrder.length === allQ.length){
+    // rebuild Q in saved order
+    const map = {};
+    allQ.forEach(q => map[q.question_id] = q);
+    Q = savedOrder.map(id => map[id]).filter(Boolean);
+    qi = Math.min(savedIdx, Q.length - 1);
+  }else{
+    Q = shuffle([...allQ]);
+    qi = 0;
+  }
+
+  go('scrQuiz');
+  render();
+  refreshWBCount();
+}
+
+/* ========================================
+   RENDER QUESTION
+   ======================================== */
+function render(){
+  answered = false;
+  const q = Q[qi];
+  if(!q) return;
+
+  el('tagType').textContent = q.type==='single' ? '单选题' : '判断题';
+  el('qNum').textContent    = (qi+1) + '/' + Q.length;
+  el('stemBox').textContent = q.stem;
+  el('aiBox').innerHTML     = '';
+  el('btnNext').classList.remove('on');
+
+  if(qi >= Q.length - 1) el('btnNext').textContent = '查看结果';
+  else el('btnNext').textContent = '下一题';
+
+  // collect btn
+  const inWB = getWB().some(w=>w.question_id===q.question_id);
+  el('colBox').innerHTML = `<div class="collect-wrap"><button class="btn-collect ${inWB?'on':''}" id="btnC" onclick="togCollect(${q.question_id})">${inWB?'✅ 已收藏':'📥 收藏到错题本'}</button></div>`;
+
+  // options
+  const box = el('optsBox');
+  box.innerHTML = '';
+  let opts = q.type==='single' ? parseOpts(q.options) : [{l:'A',t:'正确'},{l:'B',t:'错误'}];
+  const correct = normAns(q);
+
+  // 已答状态恢复
+  const prev = wrongMode ? null : getQState(q.question_id);
+
+  opts.forEach(o=>{
+    const d = document.createElement('div');
+    d.className = 'opt';
+    d.dataset.l = o.l;
+    d.innerHTML = `<span class="opt-letter">${o.l}</span><span class="opt-body">${o.t}</span>`;
+
+    if(prev){
+      // 回看已答题：锁定选项 + 展示对错 + 显示下一题按钮
+      d.classList.add('locked');
+      if(prev==='correct' && o.l===correct) d.classList.add('hit-ok');
+      else if(prev==='wrong'){
+        d.classList.add(o.l===correct ? 'show-ok' : 'hit-err');
+      }
+      answered = true;
+      el('btnNext').classList.add('on');
+    }else{
+      d.onclick = ()=> pick(d, o.l, correct, q);
+    }
+    box.appendChild(d);
+  });
+
+  refreshHeader();
+  setLastIdx(qi);
+  setOrder(Q.map(q=>q.question_id));
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function refreshHeader(){
+  const st = getState();
+  let ok=0,err=0;
+  for(const k in st){if(st[k]==='correct')ok++;else if(st[k]==='wrong')err++}
+  el('sOk').textContent  = '✓ '+ok;
+  el('sErr').textContent = '✗ '+err;
+  el('pBar').style.width = ((qi/Q.length)*100)+'%';
+}
+
+/* ========================================
+   PARSE
+   ======================================== */
+function parseOpts(raw){
+  const res=[], L=['A','B','C','D'];
+  for(let i=0;i<L.length;i++){
+    const t=L[i]+'.', s=raw.indexOf(t);
+    if(s===-1) continue;
+    const e=i<L.length-1 ? (raw.indexOf(L[i+1]+'.',s+2)===-1?raw.length:raw.indexOf(L[i+1]+'.',s+2)) : raw.length;
+    res.push({l:L[i],t:raw.slice(s+2,e).trim()});
+  }
+  return res;
+}
+function normAns(q){return q.type==='judge'?(q.answer==='正确'?'A':'B'):q.answer.trim().toUpperCase()}
+
+/* ========================================
+   PICK ANSWER
+   ======================================== */
+function pick(el, picked, correct, q){
+  if(answered) return;
+  answered = true;
+
+  // 锁定所有选项，禁止重复点击
+  const allOpts = el('optsBox').querySelectorAll('.opt');
+  allOpts.forEach(o=>o.classList.add('locked'));
+
+  if(picked===correct){
+    // ====== 答对 ======
+    el.classList.add('hit-ok');
+    if(!wrongMode) setQState(q.question_id,'correct');
+    refreshHeader();
+    // 丝滑自动跳转：延迟 600ms 后进入下一题
+    setTimeout(()=> goNext(), 600);
+  }else{
+    // ====== 答错 ======
+    el.classList.add('hit-err');
+    // 高亮正确答案
+    allOpts.forEach(o=>{if(o.dataset.l===correct) o.classList.add('show-ok')});
+    if(!wrongMode){
+      setQState(q.question_id,'wrong');
+      addWB(q);
+      const bc=el('btnC');if(bc){bc.classList.add('on');bc.textContent='✅ 已收藏';}
+    }
+    refreshHeader();
+    // 展示【下一题】按钮，等用户看完解析后手动跳转
+    el('btnNext').classList.add('on');
+    // 触发 AI 解析
+    askAI(q,picked,correct);
+  }
+}
+
+/* ========================================
+   COLLECT / WRONG BOOK
+   ======================================== */
+function addWB(q){
+  const w=getWB();
+  if(w.some(x=>x.question_id===q.question_id)) return;
+  w.push({question_id:q.question_id,type:q.type,stem:q.stem,options:q.options||'',answer:q.answer});
+  setWB(w);refreshWBCount();
+}
+function rmWB(qid){setWB(getWB().filter(w=>w.question_id!==qid));refreshWBCount()}
+function refreshWBCount(){
+  const n=getWB().length, d=el('wbDot');
+  if(n>0){d.style.display='flex';d.textContent=n}else d.style.display='none';
+}
+function togCollect(qid){
+  const q=allQ.find(x=>x.question_id===qid)||Q.find(x=>x.question_id===qid);
+  if(!q)return;
+  const btn=el('btnC');
+  if(getWB().some(w=>w.question_id===qid)){rmWB(qid);btn.classList.remove('on');btn.textContent='📥 收藏到错题本'}
+  else{addWB(q);btn.classList.add('on');btn.textContent='✅ 已收藏'}
+}
+
+/* ========================================
+   AI FETCH (OpenAI-compatible, minimal body)
+   ======================================== */
+async function askAI(q,picked,correct){
+  const box=el('aiBox');
+  box.innerHTML=`<div class="ai"><div class="ai-hd"><span class="dot"></span>AI 导师深度解析</div><div class="ai-ld">正在分析<span class="dots"></span></div></div>`;
+
+  const cfg = getSettings();
+
+  // ——— 智能 URL 拼接：避免 /chat/completions 重复 ———
+  let endpoint = cfg.url.trim().replace(/\/+$/, '');   // 去尾部斜杠
+  if(!/\/chat\/completions\/?$/.test(endpoint)){
+    endpoint += '/chat/completions';
+  }
+
+  // ——— 清洗用户输入，防止特殊字符破坏 JSON ———
+  const sanitize = s => String(s||'').replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '');
+
+  const sysMsg = '你是人工智能训练师（4级）考试的金牌讲师。请针对学生的错题，用简洁的中文直接回答：\n1. 思维陷阱：指出学生为什么会选错。\n2. 考点解析：结合考试标准讲透正确知识点。\n3. 记忆口诀：一句话总结核心记忆点。\n用 Markdown 格式，不要废话。';
+  const usrMsg = `题目：${sanitize(q.stem)}\n选项：${sanitize(q.options)||'（判断题）'}\n学生选了：${picked}\n正确答案：${correct}`;
+
+  // ——— 最精简请求体：只保留 model + messages ———
+  const body = {
+    model: cfg.model,
+    messages: [
+      {role:'system', content: sysMsg},
+      {role:'user',   content: usrMsg}
+    ]
+  };
+
+  try{
+    const r = await fetch(endpoint, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.key},
+      body: JSON.stringify(body)
+    });
+    if(!r.ok){
+      let det='';
+      try{const d=await r.json();det=d.error?.message||JSON.stringify(d)}catch{}
+      throw new Error('API '+r.status+(det?': '+det:''));
+    }
+    const data = await r.json();
+    const md = data.choices?.[0]?.message?.content;
+    if(!md) throw new Error('返回内容为空');
+    box.innerHTML=`<div class="ai"><div class="ai-hd"><span class="dot"></span>AI 导师深度解析</div><div class="ai-body">${md2html(md)}</div></div>`;
+  }catch(e){
+    box.innerHTML=`<div class="ai"><div class="ai-hd">⚠️ AI 解析失败</div><div class="ai-body"><div class="ai-err">${esc(e.message)}</div><div style="margin-top:8px;font-size:12px;color:var(--text-4)">可在右上角 ⚙️ 设置中修改 API 配置</div></div></div>`;
+  }
+}
+
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function md2html(md){
+  return md
+    .replace(/^### (.+)$/gm,'<h3>$1</h3>').replace(/^## (.+)$/gm,'<h3>$1</h3>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/`(.+?)`/g,'<code>$1</code>')
+    .replace(/^- (.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g,'<ul>$&</ul>')
+    .replace(/\n{2,}/g,'</p><p>').replace(/\n/g,'<br>');
+}
+
+/* ========================================
+   NAVIGATION
+   ======================================== */
+function goNext(){
+  qi++;
+  if(qi>=Q.length) showResult();
+  else{el('btnNext').textContent='下一题';render()}
+}
+
+function showResult(){
+  go('scrRes');
+  const total=Q.length, st=getState();
+  let ok=0;Q.forEach(q=>{if(st[q.question_id]==='correct')ok++});
+  const err=total-ok, pct=total?Math.round(ok/total*100):0;
+  el('resPct').textContent=pct+'%';
+  el('resAll').textContent=total;
+  el('resOk').textContent=ok;
+  el('resErr').textContent=err;
+  const c=2*Math.PI*52;
+  el('resRing').style.strokeDashoffset=c*(1-pct/100);
+  el('resRing').style.stroke=pct>=80?'var(--success)':pct>=60?'var(--primary)':'var(--danger)';
+}
+
+function restart(){
+  if(wrongMode){startWrong();return}
+  setState({});setOrder(null);setLastIdx(0);
+  Q=shuffle([...allQ]);qi=0;
+  el('btnNext').textContent='下一题';
+  go('scrQuiz');render();
+}
+
+function confirmReset(){
+  if(!confirm('确定要清空所有答题记录并从头开始吗？')) return;
+  setState({});setOrder(null);setLastIdx(0);setWB([]);
+  Q=shuffle([...allQ]);qi=0;wrongMode=false;
+  el('modeBar').classList.remove('on');
+  el('btnNext').textContent='下一题';
+  go('scrQuiz');render();refreshWBCount();
+  toast('已重置全部进度');
+}
+
+/* ========================================
+   WRONG MODE
+   ======================================== */
+function startWrong(){
+  const wb=getWB();
+  if(!wb.length){toast('错题本为空');return}
+  wrongMode=true;
+  Q=wb.map(w=>allQ.find(q=>q.question_id===w.question_id)||w).filter(Boolean);
+  shuffle(Q);
+  qi=0;
+  el('modeBar').classList.add('on');
+  el('btnNext').textContent='下一题';
+  go('scrQuiz');render();
+}
+function exitWrong(){
+  wrongMode=false;
+  resumeOrStart();
+}
+
+/* ========================================
+   ANSWER SHEET
+   ======================================== */
+function openSheet(){
+  const grid=el('sheetGrid');
+  grid.innerHTML='';
+  const st=getState();
+
+  let okC=0,errC=0;
+  Q.forEach((q,i)=>{
+    const d=document.createElement('div');
+    let cls='sheet-dot ';
+    const s=st[q.question_id];
+    if(s==='correct'){cls+='sd-ok';okC++}
+    else if(s==='wrong'){cls+='sd-err';errC++}
+    else cls+='sd-pending';
+    if(i===qi) cls+=' sd-here';
+    d.className=cls;
+    d.textContent=q.question_id;
+    d.onclick=()=>{qi=i;render();closeSheet()};
+    grid.appendChild(d);
+  });
+  el('sheetSummary').textContent=`共${Q.length}题 · 正确${okC} · 错误${errC}`;
+  el('ovSheet').classList.add('open');
+}
+function closeSheet(){el('ovSheet').classList.remove('open')}
+
+/* ========================================
+   WRONG BOOK
+   ======================================== */
+function openWB(){
+  const bd=el('wbBody'), wb=getWB();
+  if(!wb.length){
+    bd.innerHTML='<div class="wb-empty">🎉 暂无错题，继续加油！</div>';
+  }else{
+    bd.innerHTML=wb.map(w=>`
+      <div class="wb-item">
+        <div class="wb-stem">${w.stem}</div>
+        <div class="wb-meta">
+          <span class="wb-tag wb-tag-ok">答案: ${w.answer}</span>
+          <span class="wb-tag wb-tag-type">${w.type==='single'?'单选':'判断'}</span>
+        </div>
+        <div class="wb-acts">
+          <button class="b-go" onclick="startWrong();closeWB()">刷错题</button>
+          <button onclick="rmWB(${w.question_id});openWB()">移除</button>
+        </div>
+      </div>`).join('');
+  }
+  el('ovWB').classList.add('open');
+}
+function closeWB(){el('ovWB').classList.remove('open')}
+
+/* ========================================
+   SETTINGS
+   ======================================== */
+function openSet(){
+  const c=getSettings();
+  el('setUrl').value   = c.url   || '';
+  el('setKey').value   = c.key   || '';
+  el('setModel').value = c.model || '';
+  el('ovSet').classList.add('open');
+}
+function closeSet(){el('ovSet').classList.remove('open')}
+function saveSet(){
+  const s={url:el('setUrl').value.trim(), key:el('setKey').value.trim(), model:el('setModel').value.trim()};
+  if(!s.url||!s.key||!s.model){toast('请填写所有配置项');return}
+  saveSettings(s);closeSet();toast('配置已保存');
+}
+
+/* ========================================
+   UTILS
+   ======================================== */
+function el(id){return document.getElementById(id)}
+function go(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));el(id).classList.add('active')}
+function closeOut(e,id){if(e.target===e.currentTarget) el(id).classList.remove('open')}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.random()*i+1|0;[a[i],a[j]]=[a[j],a[i]]}return a}
+function toast(msg){const t=el('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000)}
+
+/* ========================================
+   GO
+   ======================================== */
+init();
+</script>
+</body>
+</html>
